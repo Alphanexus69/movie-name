@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Movie Search</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #38bdf8;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 1.5rem 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      width: 100%;
+      max-width: 800px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    header h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.3rem;
+    }
+    .search-box {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 0.8rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: var(--card-bg);
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+    }
+    input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+    button {
+      padding: 0.8rem 1.2rem;
+      border-radius: 8px;
+      border: none;
+      background-color: var(--accent);
+      color: #0f172a;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #status {
+      text-align: center;
+      margin: 1rem 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 1rem;
+    }
+    .movie-card {
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .movie-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      background-color: #334155;
+    }
+    .movie-info {
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      flex: 1;
+    }
+    .movie-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .movie-meta {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .movie-link {
+      margin-top: auto;
+      padding-top: 0.5rem;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>🎬 Movieku Search</h1>
+      <p style="color: var(--muted); font-size: 0.9rem;">Search movies & series</p>
+    </header>
+
+    <form class="search-box" id="search-form">
+      <input type="text" id="search-input" placeholder="Type a title (e.g. Batman)..." required />
+      <button type="submit">Search</button>
+    </form>
+
+    <div id="status"></div>
+    <div class="results-grid" id="results"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById('search-form');
+    const input = document.getElementById('search-input');
+    const resultsContainer = document.getElementById('results');
+    const statusText = document.getElementById('status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const query = input.value.trim();
+      if (!query) return;
+
+      resultsContainer.innerHTML = '';
+      statusText.textContent = `Searching for "${query}"...`;
+
+      try {
+        const endpoint = `https://movie-beast.vercel.app/api?action=search&q=${encodeURIComponent(query)}`;
+        const res = await fetch(endpoint);
+        const json = await res.json();
+
+        if (!json.success) {
+          statusText.textContent = json.error || 'No results found.';
+          return;
+        }
+
+        const items = Array.isArray(json.data) ? json.data : (json.data?.results || []);
+
+        if (items.length === 0) {
+          statusText.textContent = `No results found for "${query}".`;
+          return;
+        }
+
+        statusText.textContent = `Showing results for "${query}":`;
+        
+        items.forEach(movie => {
+          const title = movie.title || movie.name || 'Untitled';
+          const poster = movie.poster || movie.thumbnail || movie.image || 'https://via.placeholder.com/300x450?text=No+Poster';
+          const typeOrYear = movie.type || movie.year || '';
+          const link = movie.url || movie.link || '#';
+
+          const card = document.createElement('div');
+          card.className = 'movie-card';
+          card.innerHTML = `
+            <img src="${poster}" alt="${title}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image';" />
+            <div class="movie-info">
+              <h3 class="movie-title">${title}</h3>
+              ${typeOrYear ? `<span class="movie-meta">${typeOrYear}</span>` : ''}
+              ${link !== '#' ? `<a class="movie-link" href="${link}" target="_blank">View Details →</a>` : ''}
+            </div>
+          `;
+          resultsContainer.appendChild(card);
+        });
+
+      } catch (err) {
+        statusText.textContent = 'Error connecting to the API.';
+      }
+    });
+  </script>
+</body>
+</html>
+
